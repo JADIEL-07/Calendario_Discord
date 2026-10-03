@@ -103,3 +103,34 @@ def next_occurrences(event: dict, now: datetime) -> list[tuple[str, datetime]]:
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def seconds_until_next(config: dict, now: datetime) -> float | None:
+    """Segundos hasta el wipe mas cercano de cualquier servidor, o None si ningun
+    servidor tiene una proxima fecha (todos 'once' ya pasados, o sin eventos)."""
+    best: datetime | None = None
+    for server in config.get("servers", []):
+        for event in server.get("events", []):
+            for _, dt in next_occurrences(event, now):
+                if best is None or dt < best:
+                    best = dt
+    return None if best is None else (best - now).total_seconds()
+
+
+def ramp_interval(remaining: float | None) -> float | None:
+    """Cada cuanto volver a editar el mensaje dentro de la misma corrida, segun lo
+    cerca que este el proximo wipe. None = no hace falta loop, el siguiente disparo
+    del cron (cada hora) ya se encarga.
+
+    Tramos: > 1h -> None (sale) · 30min-1h -> cada 30min · 10-30min -> cada 10min ·
+    5-10min -> cada 5min · <= 5min -> cada 1min.
+    """
+    if remaining is None or remaining > 3600:
+        return None
+    if remaining > 1800:
+        return 1800.0
+    if remaining > 600:
+        return 600.0
+    if remaining > 300:
+        return 300.0
+    return 60.0

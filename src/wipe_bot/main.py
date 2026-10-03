@@ -4,6 +4,11 @@
   python -m wipe_bot --init      # publica el mensaje y muestra su MESSAGE_ID
   python -m wipe_bot             # edita el mensaje existente (uso normal / cron)
 
+El modo normal no solo edita una vez: si el wipe mas cercano de cualquier
+servidor esta a menos de 1 hora, se queda despierto reeditando mas seguido
+mientras se acerca (30 -> 10 -> 5 -> 1 min) en vez de esperar a que el cron
+horario vuelva a llamarlo. Si nada esta cerca, edita una vez y sale.
+
 Variables de entorno: WEBHOOK_URL (secreto), MESSAGE_ID.
 """
 from __future__ import annotations
@@ -12,13 +17,34 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from .discord_webhook import edit_message, post_message
 from .render import render_message
-from .schedule import utc_now
+from .schedule import ramp_interval, seconds_until_next, utc_now
 
 DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "schedule.json"
+
+# Tope de seguridad: nunca se queda corriendo mas que esto en una sola invocacion
+# (el workflow tiene timeout-minutes acorde a esto, con margen).
+MAX_LOOP_SECONDS = 65 * 60
+
+
+def _run_update_loop(config_path: Path, webhook_url: str, message_id: str) -> None:
+    deadline = time.monotonic() + MAX_LOOP_SECONDS
+    while True:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        now = utc_now()
+        edit_message(webhook_url, message_id, render_message(config, now))
+
+        remaining = seconds_until_next(config, now)
+        step = ramp_interval(remaining)
+        time_left = deadline - time.monotonic()
+        if step is None or time_left <= 0:
+            return
+        sleep_for = max(5.0, min(step, remaining, time_left))
+        time.sleep(sleep_for)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -59,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     if not message_id:
         print("Falta MESSAGE_ID (ejecuta primero con --init)", file=sys.stderr)
         return 2
-    edit_message(webhook, message_id, text)
+    _run_update_loop(args.config, webhook, message_id)
     print("Calendario actualizado.")
     return 0
 

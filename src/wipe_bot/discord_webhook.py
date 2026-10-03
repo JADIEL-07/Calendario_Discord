@@ -33,3 +33,15 @@ def edit_message(webhook_url: str, message_id: str, content: str) -> None:
             "Ejecuta con --init para crear uno nuevo."
         )
     resp.raise_for_status()
+
+
+def delete_message(webhook_url: str, message_id: str) -> None:
+    """Borra un mensaje publicado por ESTE MISMO webhook.
+
+    Discord no deja que un webhook borre mensajes que publico una persona (o
+    cualquier otro autor): esto solo funciona sobre mensajes que el propio
+    webhook creo, igual que `edit_message`.
+    """
+    resp = requests.delete(f"{webhook_url}/messages/{message_id}", timeout=TIMEOUT)
+    if resp.status_code not in (204, 404):
+        resp.raise_for_status()
