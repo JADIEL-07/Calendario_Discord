@@ -1,0 +1,69 @@
+{
+  "title": "🔄 **CALENDARIO DE WIPES** · cuenta regresiva en vivo (tu hora local)",
+  "intro": "Se actualiza solo. Fechas calculadas según el calendario de cada servidor; pueden cambiar, confirma en su Discord.",
+  "servers": [
+    {
+      "name": "INX",
+      "emoji": "🟢",
+      "note": "Solo miércoles · resto viernes, rotación 6→2→4→3 man",
+      "events": [
+        {"type": "weekly", "label": "Solo x25", "weekday": "wed", "time": "18:00", "tz": "Europe/Paris"},
+        {"type": "rotation", "weekday": "fri", "time": "19:00", "tz": "Europe/Paris",
+         "anchor": "2026-10-09", "cycle": ["6 man", "2 man", "4 man", "3 man"]}
+      ]
+    },
+    {
+      "name": "MESA",
+      "emoji": "🟢",
+      "note": "1 man lun · 2 man sáb · 3/4 man vie · 100x mié cada 2 sem",
+      "events": [
+        {"type": "weekly", "label": "1 man", "weekday": "mon", "time": "13:00", "tz": "America/New_York"},
+        {"type": "weekly", "label": "2 man", "weekday": "sat", "time": "13:00", "tz": "America/New_York"},
+        {"type": "weekly", "label": "3/4 man", "weekday": "fri", "time": "13:00", "tz": "America/New_York"},
+        {"type": "interval", "label": "100x (4 man)", "anchor": "2026-10-07", "every_days": 14, "time": "13:00", "tz": "America/New_York"}
+      ]
+    },
+    {
+      "name": "ALPHA ARK",
+      "emoji": "🟢",
+      "note": "x50 · 2 y 4 man alternan cada 2 semanas",
+      "events": [
+        {"type": "interval", "label": "2 man", "anchor": "2026-10-03", "every_days": 14, "time": "10:00", "tz": "America/Bogota"},
+        {"type": "interval", "label": "4 man", "anchor": "2026-10-10", "every_days": 14, "time": "10:00", "tz": "America/Bogota"}
+      ]
+    },
+    {
+      "name": "LUNAR ARK",
+      "emoji": "🟡",
+      "note": "x20 · solo la fecha vista, sin calendario fijo confirmado",
+      "events": [
+        {"type": "once", "label": "2 man", "at": "2026-10-07T11:00", "tz": "America/Bogota"}
+      ]
+    },
+    {
+      "name": "TAZZ",
+      "emoji": "🟡",
+      "note": "x20 · solo la fecha vista, sin calendario fijo confirmado",
+      "events": [
+        {"type": "once", "label": "2 man", "at": "2026-10-03T12:00", "tz": "America/Bogota"}
+      ]
+    },
+    {
+      "name": "ARK NOVA",
+      "emoji": "🟢",
+      "note": "4 man · 12 mapas · wipe mensual el día 11",
+      "events": [
+        {"type": "monthly", "label": "4 man", "day": 11, "time": "10:00", "tz": "America/Bogota"}
+      ]
+    },
+    {
+      "name": "NEW ERA",
+      "emoji": "🟡",
+      "note": "duo · temporada nueva cada 2 semanas (estimado)",
+      "events": [
+        {"type": "interval", "label": "duo", "anchor": "2026-10-09", "every_days": 14, "time": "18:00", "tz": "Europe/Paris"}
+      ]
+    }
+  ],
+  "no_data": ["MADALARK (no encontré su servidor en tu lista)"]
+}
