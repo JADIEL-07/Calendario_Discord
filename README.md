@@ -8,7 +8,12 @@ Lo que el bot sí hace solo es **acelerar sus propias ediciones cuando un wipe s
 
 ```
 config/schedule.json        # ÚNICO archivo que editas: servidores, reglas, zonas horarias
-src/wipe_bot/               # código (schedule, render, discord_webhook, main)
+src/wipe_bot/                 # código
+  schedule.py                   # calculo de fechas (DST) y de cadencia
+  render.py                     # construye el texto del mensaje
+  discord_webhook.py            # publica/edita/borra via webhook (solo sus propios mensajes)
+  discord_bot.py                # limpia el canal via bot (puede borrar mensajes de cualquiera)
+  main.py                       # punto de entrada
 tests/                      # pruebas (pytest)
 .github/workflows/update.yml  # cron cada hora
 ```
@@ -37,6 +42,18 @@ tests/                      # pruebas (pytest)
 
 Probar sin tocar Discord (PowerShell): `$env:PYTHONPATH = "src"; python -m wipe_bot --dry-run`. Tests: `pip install -r requirements-dev.txt; pytest`.
 
+## Limpieza automática del canal (opcional)
+
+Un webhook solo puede editar/borrar los mensajes que él mismo publicó — nunca uno que pegaste a mano. Para que el bot borre *cualquier* mensaje que no sea el del calendario (y así limpiar el que publicaste manualmente, o cualquier otro que aparezca después), hace falta un **bot de Discord** de verdad, con permiso "Gestionar mensajes". Es una credencial más amplia que el webhook: con ese permiso puede borrar mensajes de cualquier persona en el canal donde lo invites, así que inviítalo solo a ese canal.
+
+1. **Crear la app y el bot**: [discord.com/developers/applications](https://discord.com/developers/applications) → *New Application* → pestaña *Bot* → *Reset Token* → copiar el token. Es un secreto, igual que `WEBHOOK_URL`.
+2. **Invitarlo solo al canal de wipes**: pestaña *OAuth2* → *URL Generator* → scope `bot` → permisos `View Channel`, `Read Message History`, `Manage Messages` → abrir la URL generada y añadirlo a tu servidor. Luego, en el canal `🔄┃ᴡɪᴘᴇ` → Editar canal → Permisos → dale esos mismos permisos solo ahí si quieres limitarlo más (opcional pero recomendado).
+3. **Canal ID**: activa el modo desarrollador en Discord (Ajustes → Avanzado → Modo desarrollador), luego clic derecho sobre el canal → *Copiar ID de canal*.
+4. **Secreto y variable en GitHub**: `DISCORD_BOT_TOKEN` (Secrets) = el token del paso 1; `CHANNEL_ID` (Variables) = el id del paso 3.
+5. Lanza el workflow a mano una vez: debería borrar el mensaje viejo (y cualquier otro que no sea el calendario) en esa misma corrida.
+
+Si no configuras `DISCORD_BOT_TOKEN`/`CHANNEL_ID`, el bot sigue funcionando igual, solo que sin esta limpieza (lo avisa en el log de Actions).
+
 ## Tipos de regla (`config/schedule.json`)
 
 - `weekly`: cada semana (`weekday`, `time`, `tz`). El horario de verano se aplica solo según la zona.
@@ -54,6 +71,6 @@ Probar sin tocar Discord (PowerShell): `$env:PYTHONPATH = "src"; python -m wipe_
 
 - El contador `:R` muestra la unidad más gruesa que le quede (ej. "en 3 días" en vez de "en 3 días y 4 horas"); es cómo Discord lo redondea, no algo que el bot controle.
 - El cron de GitHub puede retrasarse algunos minutos y se pausa si el repo está 60 días sin actividad.
-- `delete_message(webhook_url, message_id)` en `discord_webhook.py` deja que el bot borre sus propios mensajes (útil si el `MESSAGE_ID` queda inválido y hay que publicar uno nuevo). No sirve para borrar el mensaje que publicaste a mano: Discord nunca deja que un webhook borre mensajes de otro autor, sin excepción.
+- `delete_message(webhook_url, message_id)` en `discord_webhook.py` deja que el bot (via webhook) borre sus propios mensajes (útil si el `MESSAGE_ID` queda inválido y hay que publicar uno nuevo). Para borrar mensajes de otro autor hace falta el bot de "Limpieza automática del canal" de arriba.
+- La limpieza del canal (bot) borra mensajes de hasta 100 a la vez si tienen menos de 14 días; los más viejos los borra uno por uno porque la API de Discord no permite bulk-delete sobre mensajes más viejos que eso. Si el canal tiene muchísimo historial, solo revisa las últimas ~500 entradas por corrida (5 páginas de 100).
 - Datos sin confirmar: Lunar Ark y Tazz (una sola fecha vista), New Era (estimado), Ark Nova (mensual deducido de solo 2 fechas vistas). MESA 100x tiene una encuesta cerrada "100x 1 week wipes" ganada con 83% a favor: si el servidor pasa a wipe semanal, cambia su evento a `weekly` en el JSON. Madalark sigue sin datos (no se encontró ese servidor). Si alguno cambia su calendario, edita `config/schedule.json`.
-- El webhook solo edita sus propios mensajes: el mensaje que publicaste a mano seguirá existiendo; bórralo tú.

@@ -9,7 +9,13 @@ servidor esta a menos de 1 hora, se queda despierto reeditando mas seguido
 mientras se acerca (30 -> 10 -> 5 -> 1 min) en vez de esperar a que el cron
 horario vuelva a llamarlo. Si nada esta cerca, edita una vez y sale.
 
-Variables de entorno: WEBHOOK_URL (secreto), MESSAGE_ID.
+Tambien borra, en cada corrida, cualquier otro mensaje del canal que no sea el
+del calendario (p. ej. uno publicado a mano) -- para eso hace falta ademas un
+bot de Discord con permiso "Gestionar mensajes" (DISCORD_BOT_TOKEN, CHANNEL_ID);
+si esas dos variables no estan, simplemente se omite esa limpieza.
+
+Variables de entorno: WEBHOOK_URL (secreto), MESSAGE_ID,
+DISCORD_BOT_TOKEN (secreto, opcional), CHANNEL_ID (opcional).
 """
 from __future__ import annotations
 
@@ -20,6 +26,7 @@ import sys
 import time
 from pathlib import Path
 
+from .discord_bot import DiscordBotError, purge_other_messages
 from .discord_webhook import edit_message, post_message
 from .render import render_message
 from .schedule import ramp_interval, seconds_until_next, utc_now
@@ -85,6 +92,19 @@ def main(argv: list[str] | None = None) -> int:
     if not message_id:
         print("Falta MESSAGE_ID (ejecuta primero con --init)", file=sys.stderr)
         return 2
+
+    bot_token = os.environ.get("DISCORD_BOT_TOKEN")
+    channel_id = os.environ.get("CHANNEL_ID")
+    if bot_token and channel_id:
+        try:
+            borrados = purge_other_messages(bot_token, channel_id, message_id)
+            if borrados:
+                print(f"Limpieza: se borraron {borrados} mensaje(s) ajenos al calendario.")
+        except DiscordBotError as exc:
+            print(f"Aviso: fallo la limpieza del canal ({exc}); sigo con la edicion normal.", file=sys.stderr)
+    else:
+        print("Limpieza del canal desactivada (faltan DISCORD_BOT_TOKEN / CHANNEL_ID).")
+
     _run_update_loop(args.config, webhook, message_id)
     print("Calendario actualizado.")
     return 0
